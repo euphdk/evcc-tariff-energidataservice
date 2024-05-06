@@ -1,0 +1,6 @@
+[server]
+listen = 7654
+
+[energidataservice]
+region = "dk1"
+gridcompany = "N1"
