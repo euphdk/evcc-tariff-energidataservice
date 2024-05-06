@@ -9,7 +9,8 @@ import (
 
 type Config struct {
 	Server struct {
-		Listen int `toml:"listen"`
+		Listen         string `toml:"listen"`
+		UpdateInterval int    `toml:"updateinterval"`
 	} `toml:"server"`
 	Energidataservice struct {
 		Region      string
@@ -19,7 +20,7 @@ type Config struct {
 
 func GetConfig(configfile string) (Config, error) {
 	var config Config
-	
+
 	file, err := os.Open(configfile)
 
 	if err != nil {
@@ -36,6 +37,6 @@ func GetConfig(configfile string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	
+
 	return config, nil
 }

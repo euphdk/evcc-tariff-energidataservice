@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/euphdk/evcc-tariff-energidataservice/internal/config"
 	"github.com/euphdk/evcc-tariff-energidataservice/internal/server"
@@ -16,7 +14,12 @@ func main() {
 		slog.Error("Couldn't get config", "error", err.Error())
 	}
 
-	fmt.Printf("%#v\n", c)
+	slog.Info("Config",
+		"server.listen", c.Server.Listen,
+		"server.updateinterval", c.Server.UpdateInterval,
+		"energidataservice.region", c.Energidataservice.Region,
+		"energidataservice.gridcompany", c.Energidataservice.GridCompany,
+	)
 
 	done := make(chan error)
 	s, err := server.GetServer(c)
@@ -24,9 +27,9 @@ func main() {
 		slog.Error("Couldn't get server", "error", err.Error())
 	}
 
-	go s.RunBackground(done)
+	go s.RunBackgroundJobs(done)
+	go s.RunApp(done)
+	err = <-done
+	slog.Error(err.Error())
 
-	time.Sleep(120 * time.Second)
-
-	
 }

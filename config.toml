@@ -1,5 +1,6 @@
 [server]
-listen = 7654
+listen = ":7654"
+updateinterval = 5 # Minutes
 
 [energidataservice]
 region = "dk1"
