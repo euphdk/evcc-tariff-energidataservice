@@ -50,4 +50,3 @@ type ChargeRecord struct {
 	TaxIndicator         int
 	ResolutionDuration   string
 }
-
