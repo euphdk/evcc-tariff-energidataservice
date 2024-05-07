@@ -22,7 +22,7 @@ type Server struct {
 	CurrentForecast []*EvccRate
 }
 
-func GetServer(conf config.Config) (*Server, error) {
+func GetServer(conf config.Config) *Server {
 	server := &Server{
 		mu:              &sync.Mutex{},
 		Config:          conf,
@@ -30,7 +30,7 @@ func GetServer(conf config.Config) (*Server, error) {
 		CurrentForecast: []*EvccRate{},
 	}
 	server.RegisterRoutes()
-	return server, nil
+	return server
 }
 
 func (s *Server) RunBackgroundJobs(done chan error) {

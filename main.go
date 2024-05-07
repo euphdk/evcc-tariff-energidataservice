@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"os"
 
 	"github.com/euphdk/evcc-tariff-energidataservice/internal/config"
 	"github.com/euphdk/evcc-tariff-energidataservice/internal/server"
@@ -12,6 +13,7 @@ func main() {
 	c, err := config.GetConfig("config.toml")
 	if err != nil {
 		slog.Error("Couldn't get config", "error", err.Error())
+		os.Exit(1)
 	}
 
 	slog.Info("Config",
@@ -22,10 +24,8 @@ func main() {
 	)
 
 	done := make(chan error)
-	s, err := server.GetServer(c)
-	if err != nil {
-		slog.Error("Couldn't get server", "error", err.Error())
-	}
+
+	s:= server.GetServer(c)
 
 	go s.RunBackgroundJobs(done)
 	go s.RunApp(done)
