@@ -16,19 +16,20 @@ type EvccRate struct {
 }
 
 type Server struct {
-	Mutex           *sync.Mutex
+	mu              *sync.Mutex
 	Config          config.Config
 	App             *fiber.App
 	CurrentForecast []*EvccRate
 }
 
-func GetServer(conf config.Config) (Server, error) {
-	server := Server{
-		Mutex:           &sync.Mutex{},
+func GetServer(conf config.Config) (*Server, error) {
+	server := &Server{
+		mu:              &sync.Mutex{},
 		Config:          conf,
 		App:             fiber.New(),
 		CurrentForecast: []*EvccRate{},
 	}
+	server.RegisterRoutes()
 	return server, nil
 }
 
@@ -36,7 +37,9 @@ func (s *Server) RunBackgroundJobs(done chan error) {
 	fmt.Println("Running...")
 
 	for range time.Tick(time.Duration(s.Config.Server.UpdateInterval) * time.Minute) {
+		s.mu.Lock()
 		fmt.Println("Running... again...")
+		s.mu.Unlock()
 		done <- fmt.Errorf("blah")
 	}
 }
