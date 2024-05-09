@@ -28,7 +28,7 @@ func main() {
 	s:= server.GetServer(c)
 
 	go s.RunBackgroundJobs(done)
-	go s.RunApp(done)
+	// go s.RunApp(done)
 	err = <-done
 	slog.Error(err.Error())
 
