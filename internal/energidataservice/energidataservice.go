@@ -24,23 +24,66 @@ const (
 )
 
 type EvccAPIRate struct {
-	Start string  `json:"start"`
-	End   string  `json:"end"`
-	Price float64 `json:"price"`
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+	Price float64   `json:"price"`
 }
 
-func GetEvccAPIRates(gridCompany, region string) []*EvccAPIRate {
+func GetEvccAPIRates(gridCompany, region string) []EvccAPIRate {
 
-	// datahubPricelist := GetDatahubPricelist(*ChargeOwners[gridCompany])
+	// FIXME: returned unix-timestamps doesn't align
+	datahubPricelist := getDatahubPricelist(*ChargeOwners[gridCompany])
+	elspotprices := getElspotprices(region)
 
+	data := make([]EvccAPIRate, 0)
 
-	data := make([]*EvccAPIRate, 24)
+	for unixTimestamp, price := range elspotprices {
+		date := time.Unix(unixTimestamp, 0)
+		r := EvccAPIRate{
+			Start: date.Local(),
+			End: date.Add(time.Hour).Local(),
+			Price: price / 1e3 + datahubPricelist[unixTimestamp],
+		}
+		data = append(data, r)
+	}
 
 	return data
 }
 
+func getElspotprices(region string) map[int64]float64 {
 
-func GetDatahubPricelist(chargeOwner ChargeOwner) map[int64]float64 {
+	ts := time.Now().Truncate(time.Hour)
+	uri := fmt.Sprintf(ElspotpricesURI,
+		ts.Format(TimeFormat),
+		ts.Add(24*time.Hour).Format(TimeFormat),
+		region)
+
+	r, err := httpClient.Get(uri)
+	if err != nil {
+		slog.Error("Failed GET Elspotprices", "error", err.Error())
+		return map[int64]float64{}
+	}
+	defer r.Body.Close()
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Error("Failed reading body", "error", err.Error())
+		return map[int64]float64{}
+	}
+
+	records := gjson.GetBytes(body, "records")
+
+	prices := make(map[int64]float64,0)
+
+	for _, record := range records.Array() {
+		date, _ := time.Parse(TimeFormatSecond, record.Get("HourUTC").Str)
+		price := record.Get("SpotPriceDKK").Float()
+		prices[date.Unix()] = price
+	}
+	return prices
+}
+
+func getDatahubPricelist(chargeOwner ChargeOwner) map[int64]float64 {
 
 	// Build URI
 	jsonChargeTypeCode, _ := json.Marshal(chargeOwner.ChargeTypeCode)
@@ -70,7 +113,7 @@ func GetDatahubPricelist(chargeOwner ChargeOwner) map[int64]float64 {
 
 	// slog.Info(fmt.Sprintf("%#v", gridCharge))
 
- return gridCharge
+	return gridCharge
 }
 
 func parseDatahubPricelistRecord(records gjson.Result, date time.Time) map[int64]float64 {
@@ -103,12 +146,12 @@ func parseDatahubPricelistRecord(records gjson.Result, date time.Time) map[int64
 			basePrice := record.Get("Price1").Float()
 
 			for i := 1; i <= 24; i++ {
-				currentPrice := fmt.Sprintf("Price%d",i)
+				currentPrice := fmt.Sprintf("Price%d", i)
 				price := basePrice
 				if record.Get(currentPrice).Raw != "" {
 					price = record.Get(currentPrice).Float()
 				}
-				currentHour := baseTime.Add(time.Duration(1 - i) * time.Hour).Unix()
+				currentHour := baseTime.Add(time.Duration(1-i) * time.Hour).Unix()
 				gridCharge[currentHour] = price + gridCharge[currentHour]
 			}
 		}

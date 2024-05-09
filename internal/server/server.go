@@ -17,7 +17,7 @@ type Server struct {
 	mu              *sync.Mutex
 	Config          config.Config
 	App             *fiber.App
-	CurrentForecast []*energidataservice.EvccAPIRate
+	CurrentForecast []energidataservice.EvccAPIRate
 }
 
 func GetServer(conf config.Config) *Server {
@@ -25,7 +25,7 @@ func GetServer(conf config.Config) *Server {
 		mu:              &sync.Mutex{},
 		Config:          conf,
 		App:             fiber.New(),
-		CurrentForecast: []*energidataservice.EvccAPIRate{},
+		CurrentForecast: []energidataservice.EvccAPIRate{},
 	}
 	server.RegisterRoutes()
 	return server
