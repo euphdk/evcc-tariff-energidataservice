@@ -65,6 +65,8 @@ func getElspotprices(region string) map[int64]float64 {
 		ts.Add(24*time.Hour).Format(TimeFormat),
 		region)
 
+	slog.Info("Elspotprices", "uri", uri)
+
 	r, err := httpClient.Get(uri)
 	if err != nil {
 		slog.Error("Failed GET Elspotprices", "error", err.Error())
@@ -83,7 +85,7 @@ func getElspotprices(region string) map[int64]float64 {
 	prices := make(map[int64]float64, 0)
 
 	for _, record := range records.Array() {
-		date, _ := time.Parse(TimeFormatSecond, record.Get("HourUTC").Str)
+		date, _ := time.Parse(TimeFormatSecond, record.Get("HourDK").Str)
 		price := record.Get("SpotPriceDKK").Float()
 		prices[date.Unix()] = price
 	}
