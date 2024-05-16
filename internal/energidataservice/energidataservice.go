@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"maps"
 	"net/http"
 	"net/url"
 	"time"
@@ -29,6 +28,12 @@ type EvccAPIRate struct {
 	Price float64   `json:"price"`
 }
 
+type Gridcharge struct {
+	Start  time.Time
+	End    time.Time
+	Prices [24]float64 // Hour of Day
+}
+
 func GetEvccAPIRates(gridCompany, region string) []EvccAPIRate {
 
 	// FIXME: returned unix-timestamps doesn't align
@@ -39,10 +44,12 @@ func GetEvccAPIRates(gridCompany, region string) []EvccAPIRate {
 
 	for unixTimestamp, price := range elspotprices {
 		date := time.Unix(unixTimestamp, 0)
+		gridcharge := getGridCharge(datahubPricelist, date)
+
 		r := EvccAPIRate{
 			Start: date.Local(),
-			End: date.Add(time.Hour).Local(),
-			Price: price / 1e3 + datahubPricelist[unixTimestamp],
+			End:   date.Add(time.Hour).Local(),
+			Price: price/1e3 + gridcharge,
 		}
 		data = append(data, r)
 	}
@@ -73,7 +80,7 @@ func getElspotprices(region string) map[int64]float64 {
 
 	records := gjson.GetBytes(body, "records")
 
-	prices := make(map[int64]float64,0)
+	prices := make(map[int64]float64, 0)
 
 	for _, record := range records.Array() {
 		date, _ := time.Parse(TimeFormatSecond, record.Get("HourUTC").Str)
@@ -83,7 +90,7 @@ func getElspotprices(region string) map[int64]float64 {
 	return prices
 }
 
-func getDatahubPricelist(chargeOwner ChargeOwner) map[int64]float64 {
+func getDatahubPricelist(chargeOwner ChargeOwner) []Gridcharge {
 
 	// Build URI
 	jsonChargeTypeCode, _ := json.Marshal(chargeOwner.ChargeTypeCode)
@@ -95,27 +102,78 @@ func getDatahubPricelist(chargeOwner ChargeOwner) map[int64]float64 {
 	r, err := httpClient.Get(uri)
 	if err != nil {
 		slog.Error("Failed GET DatahubPricelist", "error", err.Error())
-		return map[int64]float64{}
+		return []Gridcharge{}
 	}
 	defer r.Body.Close()
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("Failed reading body", "error", err.Error())
-		return map[int64]float64{}
+		return []Gridcharge{}
 	}
 
 	records := gjson.GetBytes(body, "records")
 
-	gridCharge := parseDatahubPricelistRecord(records, time.Now())
-	gridChargeTomorrow := parseDatahubPricelistRecord(records, time.Now().Add(24*time.Hour))
-	maps.Copy(gridCharge, gridChargeTomorrow)
+	var gridcharges []Gridcharge
 
-	// slog.Info(fmt.Sprintf("%#v", gridCharge))
+	for _, record := range records.Array() {
+		gridcharges = append(gridcharges, flaf(record))
+	}
 
-	return gridCharge
+	slog.Info("Current gridcharge", "charge", getGridCharge(gridcharges, time.Now()))
+
+	return gridcharges
 }
 
+func getGridCharge(gridcharges []Gridcharge, date time.Time) float64 {
+	var retval float64
+
+	for _, gridcharge := range gridcharges {
+		if date.After(gridcharge.Start) && date.Before(gridcharge.End) {
+			retval = retval + gridcharge.Prices[date.Hour()]
+		}
+	}
+
+	return retval
+}
+
+func flaf(record gjson.Result) Gridcharge {
+	validFrom, err := time.Parse(TimeFormatSecond, record.Get("ValidFrom").Str)
+	if err != nil {
+		slog.Error("Invalid date", "error", err.Error())
+		return Gridcharge{}
+	}
+
+	validTo := time.Now().Add(72 * time.Hour)
+	if record.Get("ValidTo").Str != "" {
+		validTo, err = time.Parse(TimeFormatSecond, record.Get("ValidTo").Str)
+		if err != nil {
+			slog.Error("Invalid date", "error", err.Error())
+			return Gridcharge{}
+		}
+	}
+
+	var prices [24]float64
+	basePrice := record.Get("Price1").Float()
+
+	for i := 0; i < 24; i++ {
+		currentPrice := fmt.Sprintf("Price%d", i+1)
+		if record.Get(currentPrice).Raw != "" {
+			price := record.Get(currentPrice).Float()
+			prices[i] = price
+		} else {
+			prices[i] = basePrice
+		}
+	}
+
+	gridcharge := Gridcharge{
+		Start: validFrom,
+		End: validTo,
+		Prices: prices,
+	}
+
+	return gridcharge
+}
 func parseDatahubPricelistRecord(records gjson.Result, date time.Time) map[int64]float64 {
 	gridCharge := make(map[int64]float64)
 
