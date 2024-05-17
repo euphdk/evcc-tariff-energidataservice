@@ -85,7 +85,7 @@ func getElspotprices(region string) map[int64]float64 {
 	prices := make(map[int64]float64, 0)
 
 	for _, record := range records.Array() {
-		date, _ := time.Parse(TimeFormatSecond, record.Get("HourDK").Str)
+		date, _ := time.Parse(TimeFormatSecond, record.Get("HourUTC").Str)
 		price := record.Get("SpotPriceDKK").Float()
 		prices[date.Unix()] = price
 	}
