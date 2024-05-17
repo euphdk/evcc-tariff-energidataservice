@@ -61,7 +61,7 @@ func getElspotprices(region string) map[int64]float64 {
 	ts := time.Now().Truncate(time.Hour)
 	uri := fmt.Sprintf(ElspotpricesURI,
 		ts.Format(TimeFormat),
-		ts.Add(24*time.Hour).Format(TimeFormat),
+		ts.Add(48*time.Hour).Format(TimeFormat),
 		region)
 
 	slog.Info("Elspotprices", "uri", uri)
