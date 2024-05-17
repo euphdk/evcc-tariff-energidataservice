@@ -15,6 +15,8 @@ type Config struct {
 	Energidataservice struct {
 		Region      string
 		GridCompany string
+		TAX         float64 `toml:"tax"`
+		VAT         float64 `toml:"vat"`
 	} `toml:"energidataservice"`
 }
 

@@ -34,9 +34,8 @@ type Gridcharge struct {
 	Prices [24]float64 // Hour of Day
 }
 
-func GetEvccAPIRates(gridCompany, region string) []EvccAPIRate {
+func GetEvccAPIRates(gridCompany, region string, tax, vat float64) []EvccAPIRate {
 
-	// FIXME: returned unix-timestamps doesn't align
 	datahubPricelist := getDatahubPricelist(*ChargeOwners[gridCompany])
 	elspotprices := getElspotprices(region)
 
@@ -49,7 +48,7 @@ func GetEvccAPIRates(gridCompany, region string) []EvccAPIRate {
 		r := EvccAPIRate{
 			Start: date.Local(),
 			End:   date.Add(time.Hour).Local(),
-			Price: price/1e3 + gridcharge,
+			Price: (price/1e3 + gridcharge + tax) * vat,
 		}
 		data = append(data, r)
 	}

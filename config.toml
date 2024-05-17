@@ -5,3 +5,5 @@ updateinterval = 60 # Minutes
 [energidataservice]
 region = "dk1"
 gridcompany = "N1"
+tax = 0.888
+vat = 1.25
