@@ -118,7 +118,7 @@ func getDatahubPricelist(chargeOwner ChargeOwner) []Gridcharge {
 	var gridcharges []Gridcharge
 
 	for _, record := range records.Array() {
-		gridcharges = append(gridcharges, flaf(record))
+		gridcharges = append(gridcharges, jsonresultToGridcharge(record))
 	}
 
 	slog.Info("Current gridcharge", "charge", getGridCharge(gridcharges, time.Now()))
@@ -138,7 +138,7 @@ func getGridCharge(gridcharges []Gridcharge, date time.Time) float64 {
 	return retval
 }
 
-func flaf(record gjson.Result) Gridcharge {
+func jsonresultToGridcharge(record gjson.Result) Gridcharge {
 	validFrom, err := time.Parse(TimeFormatSecond, record.Get("ValidFrom").Str)
 	if err != nil {
 		slog.Error("Invalid date", "error", err.Error())
@@ -168,8 +168,8 @@ func flaf(record gjson.Result) Gridcharge {
 	}
 
 	gridcharge := Gridcharge{
-		Start: validFrom,
-		End: validTo,
+		Start:  validFrom,
+		End:    validTo,
 		Prices: prices,
 	}
 
