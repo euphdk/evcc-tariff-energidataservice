@@ -25,7 +25,7 @@ func main() {
 
 	done := make(chan error)
 
-	s:= server.GetServer(c)
+	s := server.GetServer(c)
 
 	go s.RunBackgroundJobs(done)
 	go s.RunApp(done)

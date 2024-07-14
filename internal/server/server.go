@@ -11,8 +11,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-
-
 type Server struct {
 	mu              *sync.Mutex
 	Config          config.Config
