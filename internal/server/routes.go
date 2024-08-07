@@ -10,6 +10,7 @@ func (s *Server) RegisterRoutes() {
 
 func (s *Server) getIndex(c *fiber.Ctx) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return c.JSON(s.CurrentForecast)
+	currentForecast := s.CurrentForecast
+	s.mu.Unlock()
+	return c.JSON(currentForecast)
 }
