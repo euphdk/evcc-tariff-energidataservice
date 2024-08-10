@@ -34,10 +34,17 @@ type Gridcharge struct {
 	Prices [24]float64 // Hour of Day
 }
 
-func GetEvccAPIRates(gridCompany, region string, tax, vat float64) []EvccAPIRate {
+func GetEvccAPIRates(gridCompany, region string, tax, vat float64) ([]EvccAPIRate, error) {
 
-	datahubPricelist := getDatahubPricelist(*ChargeOwners[gridCompany])
-	elspotprices := getElspotprices(region)
+	datahubPricelist, err := getDatahubPricelist(*ChargeOwners[gridCompany])
+	if err != nil {
+		return []EvccAPIRate{}, err
+	}
+
+	elspotprices, err := getElspotprices(region)
+	if err != nil {
+		return []EvccAPIRate{}, err
+	}
 
 	data := make([]EvccAPIRate, 0)
 
@@ -53,10 +60,10 @@ func GetEvccAPIRates(gridCompany, region string, tax, vat float64) []EvccAPIRate
 		data = append(data, r)
 	}
 
-	return data
+	return data, nil
 }
 
-func getElspotprices(region string) map[int64]float64 {
+func getElspotprices(region string) (map[int64]float64, error) {
 
 	ts := time.Now().Truncate(time.Hour)
 	uri := fmt.Sprintf(ElspotpricesURI,
@@ -64,19 +71,19 @@ func getElspotprices(region string) map[int64]float64 {
 		ts.Add(48*time.Hour).Format(TimeFormat),
 		region)
 
-	slog.Info("Elspotprices", "uri", uri)
+	slog.Debug("Elspotprices", "uri", uri)
 
 	r, err := httpClient.Get(uri)
 	if err != nil {
 		slog.Error("Failed GET Elspotprices", "error", err.Error())
-		return map[int64]float64{}
+		return map[int64]float64{}, err
 	}
 	defer r.Body.Close()
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("Failed reading body", "error", err.Error())
-		return map[int64]float64{}
+		return map[int64]float64{}, err
 	}
 
 	records := gjson.GetBytes(body, "records")
@@ -88,29 +95,29 @@ func getElspotprices(region string) map[int64]float64 {
 		price := record.Get("SpotPriceDKK").Float()
 		prices[date.Unix()] = price
 	}
-	return prices
+	return prices, nil
 }
 
-func getDatahubPricelist(chargeOwner ChargeOwner) []Gridcharge {
+func getDatahubPricelist(chargeOwner ChargeOwner) ([]Gridcharge, error) {
 
 	// Build URI
 	jsonChargeTypeCode, _ := json.Marshal(chargeOwner.ChargeTypeCode)
 	jsonChargeType, _ := json.Marshal(chargeOwner.ChargeType)
 	filter := fmt.Sprintf(DatahubPricelistFilter, jsonChargeTypeCode, chargeOwner.GLN, jsonChargeType)
 	uri := fmt.Sprintf(DatahubPricelistURI, url.QueryEscape(filter))
-	slog.Info("Constructed URI for DatahubPricelist: " + uri)
+	slog.Debug("Constructed URI for DatahubPricelist: " + uri)
 
 	r, err := httpClient.Get(uri)
 	if err != nil {
 		slog.Error("Failed GET DatahubPricelist", "error", err.Error())
-		return []Gridcharge{}
+		return []Gridcharge{}, err
 	}
 	defer r.Body.Close()
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("Failed reading body", "error", err.Error())
-		return []Gridcharge{}
+		return []Gridcharge{}, err
 	}
 
 	records := gjson.GetBytes(body, "records")
@@ -121,9 +128,9 @@ func getDatahubPricelist(chargeOwner ChargeOwner) []Gridcharge {
 		gridcharges = append(gridcharges, jsonresultToGridcharge(record))
 	}
 
-	slog.Info("Current gridcharge", "charge", getGridCharge(gridcharges, time.Now()))
+	slog.Debug("Current gridcharge", "charge", getGridCharge(gridcharges, time.Now()))
 
-	return gridcharges
+	return gridcharges, nil
 }
 
 func getGridCharge(gridcharges []Gridcharge, date time.Time) float64 {

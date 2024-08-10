@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -33,11 +32,14 @@ func (s *Server) RunBackgroundJobs(done chan error) {
 
 	tick := time.NewTicker(time.Duration(s.Config.Server.UpdateInterval) * time.Minute)
 	for ; true; <-tick.C {
-		s.mu.Lock()
-		s.CurrentForecast = energidataservice.GetEvccAPIRates(s.Config.Energidataservice.GridCompany, s.Config.Energidataservice.Region, s.Config.Energidataservice.TAX, s.Config.Energidataservice.VAT)
-		slog.Info(fmt.Sprintf("%#v", s.CurrentForecast))
-		s.mu.Unlock()
-		// done <- fmt.Errorf("blah")
+		currentForecast, err := energidataservice.GetEvccAPIRates(s.Config.Energidataservice.GridCompany, s.Config.Energidataservice.Region, s.Config.Energidataservice.TAX, s.Config.Energidataservice.VAT)
+		if err != nil {
+			slog.Error(err.Error())
+		} else {
+			s.mu.Lock()
+			s.CurrentForecast = currentForecast
+			s.mu.Unlock()
+		}
 	}
 }
 
