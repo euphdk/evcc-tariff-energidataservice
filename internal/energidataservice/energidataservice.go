@@ -182,50 +182,6 @@ func jsonresultToGridcharge(record gjson.Result) Gridcharge {
 
 	return gridcharge
 }
-func parseDatahubPricelistRecord(records gjson.Result, date time.Time) map[int64]float64 {
-	gridCharge := make(map[int64]float64)
-
-	for _, record := range records.Array() {
-		validFrom, err := time.Parse(TimeFormatSecond, record.Get("ValidFrom").Str)
-		if err != nil {
-			slog.Error("Invalid date", "error", err.Error())
-		}
-
-		// validTo might be blank - prepare for that and just override if not...
-		validTo := time.Now().Add(24 * time.Hour)
-		if record.Get("ValidTo").Str != "" {
-			validTo, err = time.Parse(TimeFormatSecond, record.Get("ValidTo").Str)
-			if err != nil {
-				slog.Error("Invalid date", "error", err.Error())
-				return map[int64]float64{}
-			}
-		}
-
-		if dateInRange(validFrom, validTo, date) {
-			baseTime := time.Date(
-				date.Year(),
-				date.Month(),
-				date.Day(),
-				0, 0, 0, 0, date.Location(),
-			)
-
-			basePrice := record.Get("Price1").Float()
-
-			for i := 1; i <= 24; i++ {
-				currentPrice := fmt.Sprintf("Price%d", i)
-				price := basePrice
-				if record.Get(currentPrice).Raw != "" {
-					price = record.Get(currentPrice).Float()
-				}
-				currentHour := baseTime.Add(time.Duration(1-i) * time.Hour).Unix()
-				gridCharge[currentHour] = price + gridCharge[currentHour]
-			}
-		}
-	}
-
-	return gridCharge
-
-}
 
 func dateInRange(from, to, date time.Time) bool {
 	if from.Before(date) && to.After(date) {
