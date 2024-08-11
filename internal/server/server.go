@@ -32,7 +32,12 @@ func (s *Server) RunBackgroundJobs(done chan error) {
 
 	tick := time.NewTicker(time.Duration(s.Config.Server.UpdateInterval) * time.Minute)
 	for ; true; <-tick.C {
-		currentForecast, err := energidataservice.GetEvccAPIRates(s.Config.Energidataservice.GridCompany, s.Config.Energidataservice.Region, s.Config.Energidataservice.TAX, s.Config.Energidataservice.VAT)
+		currentForecast, err := energidataservice.GetEvccAPIRates(
+			s.Config.Energidataservice.GridCompany,
+			s.Config.Energidataservice.Region,
+			s.Config.Energidataservice.TAX,
+			s.Config.Energidataservice.VAT,
+		)
 		if err != nil {
 			slog.Error(err.Error())
 		} else {
