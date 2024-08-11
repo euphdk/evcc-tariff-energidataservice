@@ -182,11 +182,3 @@ func jsonresultToGridcharge(record gjson.Result) Gridcharge {
 
 	return gridcharge
 }
-
-func dateInRange(from, to, date time.Time) bool {
-	if from.Before(date) && to.After(date) {
-		return true
-	}
-
-	return false
-}
