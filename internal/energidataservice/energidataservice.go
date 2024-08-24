@@ -50,7 +50,14 @@ func GetEvccAPIRates(gridCompany, region string, tax, vat float64) ([]EvccAPIRat
 
 	for unixTimestamp, price := range elspotprices {
 		date := time.Unix(unixTimestamp, 0)
-		gridcharge := getGridCharge(datahubPricelist, date)
+		var gridcharge float64
+
+		// Loop through datahubPricelist and sum all charges (or rebates) if time matches
+		for _, entry := range datahubPricelist {
+			if date.After(entry.Start) && date.Before(entry.End) {
+				gridcharge = gridcharge + entry.Prices[date.Hour()]
+			}
+		}
 
 		r := EvccAPIRate{
 			Start: date.Local(),
@@ -128,21 +135,7 @@ func getDatahubPricelist(chargeOwner ChargeOwner) ([]Gridcharge, error) {
 		gridcharges = append(gridcharges, jsonresultToGridcharge(record))
 	}
 
-	slog.Debug("Current gridcharge", "charge", getGridCharge(gridcharges, time.Now()))
-
 	return gridcharges, nil
-}
-
-func getGridCharge(gridcharges []Gridcharge, date time.Time) float64 {
-	var retval float64
-
-	for _, gridcharge := range gridcharges {
-		if date.After(gridcharge.Start) && date.Before(gridcharge.End) {
-			retval = retval + gridcharge.Prices[date.Hour()]
-		}
-	}
-
-	return retval
 }
 
 func jsonresultToGridcharge(record gjson.Result) Gridcharge {
