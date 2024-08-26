@@ -78,7 +78,7 @@ func getElspotprices(region string) (map[int64]float64, error) {
 		ts.Add(48*time.Hour).Format(TimeFormat),
 		region)
 
-	// slog.Debug("Elspotprices", "uri", uri)
+	slog.Debug("Elspotprices", "uri", uri)
 
 	r, err := httpClient.Get(uri)
 	if err != nil {
