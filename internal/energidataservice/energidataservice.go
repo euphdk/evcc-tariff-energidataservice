@@ -25,7 +25,7 @@ const (
 type EvccAPIRate struct {
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
-	Value float64   `json:"price"`
+	Value float64   `json:"value"`
 }
 
 type Gridcharge struct {
