@@ -25,7 +25,7 @@ const (
 type EvccAPIRate struct {
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
-	Price float64   `json:"price"`
+	Value float64   `json:"price"`
 }
 
 type Gridcharge struct {
@@ -62,7 +62,7 @@ func GetEvccAPIRates(gridCompany, region string, tax, vat float64) ([]EvccAPIRat
 		r := EvccAPIRate{
 			Start: date.Local(),
 			End:   date.Add(time.Hour).Local(),
-			Price: (price/1e3 + gridcharge + tax) * vat,
+			Value: (price/1e3 + gridcharge + tax) * vat,
 		}
 		data = append(data, r)
 	}
